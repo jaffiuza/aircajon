@@ -1,0 +1,56 @@
+i used DFRobot CurieNano - A mini Development Board wich is a compatible with arduino and have BLE comunication.
+
+#include <CurieIMU.h>
+#include <CurieBLE.h>
+
+BLEPeripheral blePeripheral;
+
+// BLE Configuration
+BLEService movimentoService("180D");
+BLECharacteristic movimentoCharacteristic("00002a37-0000-1000-8000-00805f9b34fb", BLENotify);
+
+void setup() {
+  Serial.begin(9600);
+
+  CurieIMU.begin();
+  CurieIMU.setAccelerometerRange(4); 
+  CurieIMU.setGyroRange(250);
+ 
+  blePeripheral.setLocalName("AirCajon_Direita");
+  blePeripheral.setAdvertisedServiceUuid(movimentoService.uuid());
+  blePeripheral.addAttribute(movimentoService);
+  blePeripheral.addAttribute(movimentoCharacteristic);
+  blePeripheral.begin();
+}
+
+void loop() {
+  int axRaw, ayRaw, azRaw, gx, gy, gz;
+  
+  CurieIMU.readAccelerometer(axRaw, ayRaw, azRaw);
+  
+  CurieIMU.readGyro(gx, gy, gz);
+
+  // Normalização dos valores do acelerômetro
+  float ax = axRaw / 32768.0 * 4;  // Ajuste o divisor conforme necessário
+  float ay = ayRaw / 32768.0 * 4;
+  float az = azRaw / 32768.0 * 4;
+  
+  Serial.print( gx);
+  Serial.print("\t");
+  Serial.print(gy);
+  Serial.print("\t");
+  Serial.println(gz);  
+  Serial.println("---");
+  
+  if (((ax < -0.20 && ay < -0.8 ) && (gx < -1000))){
+    // Se o movimento for detectado, envia um byte pela característica BLE
+    byte movimentoDetected = 1;
+    movimentoCharacteristic.setValue(&movimentoDetected, 1);
+    
+    Serial.println("SOM");
+    
+    delay(125);  
+  }
+
+  delay(100);  
+}
